@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Adverts – nauka słówek</title>
+<style>
+:root{--bg:#f4f6fb;--card:#fff;--tx:#1e2433;--mut:#6b7285;--pri:#4255ff;--ok:#1fa971;--bad:#e5484d;--bd:#dfe3ee;--sh:0 8px 30px rgba(30,40,90,.12)}
+[data-theme=dark]{--bg:#0f1220;--card:#1a1f33;--tx:#eef0f8;--mut:#9aa1b8;--pri:#7c8aff;--ok:#38c98e;--bad:#ff6b70;--bd:#2c3350;--sh:0 8px 30px rgba(0,0,0,.45)}
+*{box-sizing:border-box}
+body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--tx);min-height:100vh}
+.wrap{max-width:720px;margin:0 auto;padding:16px}
+header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+h1{font-size:1.3rem;margin:0}
+button{font:inherit;cursor:pointer;border:1px solid var(--bd);background:var(--card);color:var(--tx);border-radius:12px;padding:10px 16px;transition:.15s}
+button:hover{border-color:var(--pri)}
+button.pri{background:var(--pri);color:#fff;border-color:var(--pri);font-weight:600}
+button.ok{background:var(--ok);color:#fff;border-color:var(--ok);font-weight:600}
+button.bad{background:var(--bad);color:#fff;border-color:var(--bad);font-weight:600}
+.panel{background:var(--card);border-radius:18px;padding:20px;box-shadow:var(--sh);margin-bottom:14px}
+label{display:block;font-size:.85rem;color:var(--mut);margin:12px 0 4px}
+select,input[type=text]{width:100%;font:inherit;padding:11px;border-radius:12px;border:1px solid var(--bd);background:var(--bg);color:var(--tx)}
+.row{display:flex;gap:10px;flex-wrap:wrap}.row>*{flex:1}
+.modes{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.modes button.sel{background:var(--pri);color:#fff;border-color:var(--pri)}
+.chk{display:flex;align-items:center;gap:8px;margin-top:14px;color:var(--tx);font-size:1rem}
+.stats{display:flex;justify-content:space-around;text-align:center;margin-top:6px}.stats b{display:block;font-size:1.5rem}.stats span{font-size:.8rem;color:var(--mut)}
+.hide{display:none!important}
+.bar{display:flex;height:10px;border-radius:6px;overflow:hidden;background:var(--bd);margin:10px 0 6px}
+.bar i{display:block;transition:width .3s}
+.cnt{display:flex;justify-content:space-between;font-size:.85rem;color:var(--mut)}
+.cnt b{color:var(--tx)}
+.scene{perspective:1000px;margin:16px 0;touch-action:pan-y}
+.card{position:relative;height:280px;transform-style:preserve-3d;transition:transform .55s cubic-bezier(.3,.8,.3,1);cursor:pointer}
+.card.flip{transform:rotateY(180deg)}
+.face{position:absolute;inset:0;backface-visibility:hidden;-webkit-backface-visibility:hidden;background:var(--card);border-radius:22px;box-shadow:var(--sh);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;font-size:1.9rem;font-weight:600;border:2px solid var(--bd)}
+.face small{position:absolute;top:14px;left:18px;font-size:.75rem;color:var(--mut);font-weight:400}
+.face.back{transform:rotateY(180deg);border-color:var(--pri)}
+.spk{position:absolute;top:8px;right:10px;padding:6px 10px;border-radius:50%;font-size:1.1rem}
+.hint{text-align:center;color:var(--mut);font-size:.8rem}
+.acts{display:flex;gap:12px}.acts button{flex:1;padding:16px;font-size:1.05rem}
+.wq{text-align:center;font-size:1.9rem;font-weight:600;margin:20px 0}
+.fb{min-height:48px;margin-top:12px;padding:12px;border-radius:12px;text-align:center;font-weight:600}
+.fb.g{background:rgba(31,169,113,.15);color:var(--ok)}.fb.r{background:rgba(229,72,77,.15);color:var(--bad)}
+input.g{border-color:var(--ok)!important}input.r{border-color:var(--bad)!important}
+.big{font-size:3rem;font-weight:800;text-align:center;color:var(--pri)}
+ul.err{padding-left:0;list-style:none;margin:10px 0}ul.err li{padding:8px 0;border-bottom:1px solid var(--bd);font-size:.95rem}
+@media(max-width:480px){.face{font-size:1.5rem}.card{height:240px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header><h1>📚 Adverts – nauka słówek</h1><button id="theme" title="Tryb jasny/ciemny">🌓</button></header>
+
+<div id="home">
+ <div class="panel">
+  <div class="stats"><div><b id="sAll">0</b><span>słówek</span></div><div><b id="sKnown" style="color:var(--ok)">0</b><span>opanowane</span></div><div><b id="sUnk" style="color:var(--bad)">0</b><span>do powtórki</span></div></div>
+ </div>
+ <div class="panel">
+  <label>Tryb nauki</label>
+  <div class="modes"><button data-m="flash" class="sel">🃏 Fiszki</button><button data-m="write">⌨️ Test pisemny</button><button data-m="review">🔁 Tylko „Nie znam”</button></div>
+  <label>Zakres</label><select id="scope"></select>
+  <div class="row"><div><label>Kierunek</label><select id="dir"><option value="en">Obcy → Polski</option><option value="pl">Polski → Obcy</option></select></div>
+  <div><label>Kolejność</label><select id="order"><option value="seq">Po kolei</option><option value="rnd">Losowo</option></select></div></div>
+  <label class="chk"><input type="checkbox" id="t50"> Test 50 (losuje 50 słówek z zakresu)</label>
+  <p class="hint" id="info"></p>
+  <button class="pri" id="start" style="width:100%;padding:14px;margin-top:6px">Start ▶</button>
+  <button id="reset" style="width:100%;margin-top:10px">Resetuj postępy</button>
+ </div>
+</div>
+
+<div id="study" class="hide">
+ <div class="row" style="align-items:center;flex-wrap:nowrap"><button id="back" style="flex:0">← Menu</button><div style="flex:3"></div></div>
+ <div class="panel" style="margin-top:12px;padding:14px">
+  <div class="bar"><i id="bK" style="background:var(--ok)"></i><i id="bU" style="background:var(--bad)"></i></div>
+  <div class="cnt"><span>Pozostało: <b id="cR">0</b></span><span>Nie znam: <b id="cU">0</b></span><span>Opanowane: <b id="cK">0</b></span></div>
+ </div>
+ <div id="flashUI">
+  <div class="scene" id="scene"><div class="card" id="card">
+   <div class="face"><small id="lf"></small><button class="spk" id="spk1">🔊</button><span id="ft"></span></div>
+   <div class="face back"><small id="lb"></small><button class="spk" id="spk2">🔊</button><span id="bt"></span></div>
+  </div></div>
+  <div class="hint">Spacja – obrót · → Znam · ← Nie znam · lub przesuń kartę</div>
+  <div class="acts" style="margin-top:14px"><button class="bad" id="bUnk">✗ Nie znam</button><button class="ok" id="bKnow">✓ Znam</button></div>
+ </div>
+ <div id="writeUI" class="hide panel">
+  <div class="hint" id="wc"></div>
+  <div class="wq" id="wq"></div>
+  <input type="text" id="wi" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Wpisz tłumaczenie i naciśnij Enter">
+  <div class="fb" id="wf"></div>
+  <button class="pri" id="wn" style="width:100%;margin-top:10px">Zatwierdź (Enter)</button>
+ </div>
+ <div id="endUI" class="hide panel"></div>
+</div>
+</div>
+
+<script>
+const RAW=`## 1. Advertising industry and terminology
+Advertising campaign|kampania reklamowa
+Advertising agency|agencja reklamowa
+Advertiser|reklamodawca
+Advertisement / advert|reklama
+Commercial|reklama komercyjna
+Promotional material|materiał promocyjny
+Marketing strategy|strategia marketingowa
+Brand awareness|świadomość marki
+Brand recognition|rozpoznawalność marki
+Brand identity|tożsamość marki
+Brand image|wizerunek marki
+Brand loyalty|lojalność wobec marki
+Brand positioning|pozycjonowanie marki
+Target audience|grupa docelowa
+Target market|rynek docelowy
+Consumer behaviour|zachowania konsumentów
+Market research|badanie rynku
+Market segmentation|segmentacja rynku
+Advertising industry|branża reklamowa
+Promotional campaign|kampania promocyjna
+## 2. Types and forms of advertising
+Print advertising|reklama prasowa
+Television commercial|reklama telewizyjna
+Radio advertising|reklama radiowa
+Outdoor advertising|reklama zewnętrzna
+Billboard|billboard
+Digital advertising|reklama cyfrowa
+Online advertising|reklama internetowa
+Social media advertising|reklama w mediach społecznościowych
+Display advertising|reklama graficzna w internecie
+Native advertising|reklama natywna
+Influencer marketing|marketing influencerski
+Endorsement|rekomendacja / poparcie
+Product placement|lokowanie produktu
+Sponsorship|sponsoring
+Direct marketing|marketing bezpośredni
+Email marketing|marketing e-mailowy
+Guerrilla marketing|marketing partyzancki
+Viral advertising|reklama wirusowa
+Comparative advertising|reklama porównawcza
+Covert advertising|reklama ukryta
+## 3. Advertising techniques and strategies
+Persuasion|perswazja
+Manipulation|manipulacja
+Emotional appeal|odwołanie do emocji
+Rational appeal|odwołanie do rozsądku
+Fear appeal|odwołanie do strachu
+Celebrity endorsement|rekomendacja celebryty
+Storytelling|opowiadanie historii
+Brand storytelling|budowanie wizerunku marki poprzez historie
+Subliminal advertising|reklama podprogowa
+Repetition|powtarzalność
+Exaggeration|wyolbrzymienie
+Humour-based advertising|reklama oparta na humorze
+Shock advertising|reklama szokująca
+Scarcity marketing|marketing oparty na ograniczonej dostępności
+Urgency-driven marketing|marketing wykorzystujący presję czasu
+Personalisation|personalizacja
+Retargeting|ponowne kierowanie reklam
+Cross-promotion|wzajemna promocja
+Word-of-mouth marketing|marketing szeptany
+Customer engagement|zaangażowanie klientów
+## 4. Advertising language and persuasive expressions
+Catchphrase|chwytliwe hasło
+Slogan|slogan reklamowy
+Tagline|krótkie hasło marki
+Catchy|chwytliwy
+Compelling|przekonujący
+Persuasive|perswazyjny
+Captivating|urzekający
+Memorable|łatwy do zapamiętania
+Intriguing|intrygujący
+Attention-grabbing|przyciągający uwagę
+Hard-hitting|mocny, dosadny
+Misleading|wprowadzający w błąd
+Exaggerated|przesadzony
+Enticing|kuszący
+Convincing|przekonujący
+Impactful|wywierający duże wrażenie
+Evocative|przywołujący emocje lub skojarzenia
+Provocative|prowokacyjny
+Engaging|angażujący
+Aspirational|odwołujący się do aspiracji
+## 5. Consumer psychology and behaviour
+Consumerism|konsumpcjonizm
+Consumer demand|popyt konsumencki
+Purchasing behaviour|zachowania zakupowe
+Buying habits|nawyki zakupowe
+Impulse buying|zakupy pod wpływem impulsu
+Brand preference|preferencje dotyczące marek
+Consumer perception|postrzeganie przez konsumentów
+Buying decision|decyzja zakupowa
+Purchase intention|zamiar zakupu
+Customer satisfaction|zadowolenie klienta
+Customer retention|utrzymanie klientów
+Customer acquisition|pozyskiwanie klientów
+Consumer trust|zaufanie konsumentów
+Peer pressure|presja rówieśnicza
+Social status|status społeczny
+Aspirational lifestyle|styl życia, do którego się aspiruje
+Psychological trigger|bodziec psychologiczny
+Emotional attachment|więź emocjonalna
+Perceived value|postrzegana wartość
+Brand association|skojarzenie z marką
+## 6. Digital marketing and social media
+Search engine optimisation (SEO)|optymalizacja pod kątem wyszukiwarek
+Search engine marketing (SEM)|marketing w wyszukiwarkach
+Pay-per-click (PPC)|płatność za kliknięcie
+Click-through rate (CTR)|współczynnik klikalności
+Conversion rate|współczynnik konwersji
+Landing page|strona docelowa
+Traffic generation|generowanie ruchu na stronie
+Web traffic|ruch na stronie internetowej
+Algorithm|algorytm
+Sponsored content|treści sponsorowane
+Affiliate marketing|marketing afiliacyjny
+Content marketing|marketing treści
+User-generated content|treści tworzone przez użytkowników
+Hashtag campaign|kampania hashtagowa
+Online presence|obecność w internecie
+Digital footprint|ślad cyfrowy
+Engagement rate|współczynnik zaangażowania
+Organic reach|zasięg organiczny
+Paid reach|zasięg płatny
+Social media influencer|influencer działający w mediach społecznościowych
+## 7. Advertising design and visual communication
+Visual appeal|atrakcyjność wizualna
+Visual identity|identyfikacja wizualna
+Graphic design|projektowanie graficzne
+Typography|typografia
+Colour scheme|kolorystyka
+Layout|układ graficzny
+Composition|kompozycja
+Imagery|materiał obrazowy
+Visual storytelling|opowiadanie historii za pomocą obrazu
+Brand logo|logo marki
+Packaging design|projektowanie opakowań
+Aesthetic appeal|atrakcyjność estetyczna
+Visual hierarchy|hierarchia wizualna
+Minimalist design|minimalistyczny projekt
+Eye-catching|przyciągający wzrok
+High-resolution image|obraz o wysokiej rozdzielczości
+Brand consistency|spójność marki
+Creative concept|koncepcja kreatywna
+Visual representation|przedstawienie wizualne
+Artistic direction|kierownictwo artystyczne
+## 8. Advertising effectiveness and performance
+Advertising effectiveness|skuteczność reklamy
+Campaign performance|wyniki kampanii
+Return on investment (ROI)|zwrot z inwestycji
+Cost per click (CPC)|koszt kliknięcia
+Cost per impression (CPM)|koszt tysiąca wyświetleń
+Conversion|konwersja
+Lead generation|pozyskiwanie potencjalnych klientów
+Sales figures|wyniki sprzedaży
+Revenue growth|wzrost przychodów
+Market share|udział w rynku
+Brand exposure|ekspozycja marki
+Reach|zasięg
+Impressions|liczba wyświetleń
+Audience engagement|zaangażowanie odbiorców
+Performance metrics|wskaźniki efektywności
+Data-driven marketing|marketing oparty na danych
+A/B testing|testowanie porównawcze
+Campaign optimisation|optymalizacja kampanii
+Audience insights|informacje o odbiorcach
+Analytics|analityka
+## 9. Ethics and controversial advertising
+False advertising|fałszywa reklama
+Deceptive advertising|reklama wprowadzająca w błąd
+Misrepresentation|przedstawianie czegoś w fałszywym świetle
+Ethical standards|standardy etyczne
+Consumer protection|ochrona konsumentów
+Advertising regulations|przepisy dotyczące reklamy
+Corporate responsibility|odpowiedzialność przedsiębiorstwa
+Transparency|przejrzystość
+Exploitation|wykorzystywanie
+Vulnerable consumers|podatni na manipulację konsumenci
+Body image|obraz własnego ciała
+Unrealistic expectations|nierealistyczne oczekiwania
+Stereotyping|stereotypizacja
+Gender stereotypes|stereotypy płciowe
+Objectification|uprzedmiotowienie
+Greenwashing|pozorowanie ekologiczności
+Manipulative tactics|manipulacyjne techniki
+Hidden advertising|ukryta reklama
+Intrusive advertising|nachalna reklama
+Advertising ban|zakaz reklamy
+## 10. Business, branding and competition
+Competitive advantage|przewaga konkurencyjna
+Market positioning|pozycjonowanie na rynku
+Market leader|lider rynku
+Market penetration|penetracja rynku
+Market demand|popyt rynkowy
+Product launch|wprowadzenie produktu na rynek
+Product differentiation|różnicowanie produktu
+Unique selling proposition (USP)|unikalna propozycja sprzedaży
+Value proposition|propozycja wartości
+Brand equity|kapitał marki
+Brand reputation|reputacja marki
+Brand ambassador|ambasador marki
+Brand extension|rozszerzenie marki
+Brand revitalisation|odświeżenie marki
+Rebranding|zmiana wizerunku marki
+Product range|asortyment produktów
+Competitive pricing|ceny konkurencyjne
+Sales promotion|promocja sprzedaży
+Customer base|baza klientów
+Market dominance|dominacja na rynku
+## 11. Advertising verbs – advanced vocabulary
+To promote|promować
+To advertise|reklamować
+To persuade|przekonywać
+To influence|wpływać
+To target|kierować do określonej grupy
+To attract|przyciągać
+To captivate|oczarowywać
+To appeal to|odwoływać się do
+To reinforce|wzmacniać
+To manipulate|manipulować
+To exaggerate|wyolbrzymiać
+To highlight|podkreślać
+To showcase|prezentować
+To endorse|rekomendować
+To generate|generować
+To stimulate|stymulować
+To boost|zwiększać
+To enhance|ulepszać
+To maximise|maksymalizować
+To undermine|podważać / osłabiać
+## 12. Advertising collocations and useful expressions
+To launch a campaign|rozpocząć kampanię
+To raise brand awareness|zwiększać świadomość marki
+To build brand loyalty|budować lojalność wobec marki
+To target a specific demographic|kierować reklamę do określonej grupy demograficznej
+To influence purchasing decisions|wpływać na decyzje zakupowe
+To drive sales|napędzać sprzedaż
+To generate demand|generować popyt
+To create a buzz|wywołać poruszenie
+To grab consumers' attention|przyciągać uwagę konsumentów
+To leave a lasting impression|pozostawić trwałe wrażenie
+To appeal to emotions|odwoływać się do emocji
+To exploit consumer insecurities|wykorzystywać niepewność konsumentów
+To shape public opinion|kształtować opinię publiczną
+To influence consumer behaviour|wpływać na zachowania konsumentów
+To stand out from the crowd|wyróżniać się na tle innych
+To gain a competitive edge|zdobywać przewagę konkurencyjną
+To convey a message|przekazywać komunikat
+To convey brand values|przekazywać wartości marki
+To boost brand visibility|zwiększać widoczność marki
+To drive consumer engagement|zwiększać zaangażowanie konsumentów
+## 13. Advertising and society
+Consumer culture|kultura konsumpcyjna
+Mass consumption|masowa konsumpcja
+Materialism|materializm
+Consumer society|społeczeństwo konsumpcyjne
+Advertising saturation|przesycenie reklamami
+Information overload|nadmiar informacji
+Media influence|wpływ mediów
+Public perception|postrzeganie społeczne
+Social responsibility|odpowiedzialność społeczna
+Cultural values|wartości kulturowe
+Societal expectations|oczekiwania społeczne
+Lifestyle marketing|marketing stylu życia
+Conspicuous consumption|konsumpcja na pokaz
+Instant gratification|natychmiastowa gratyfikacja
+Peer influence|wpływ rówieśników
+Social conformity|konformizm społeczny
+Media literacy|umiejętność krytycznego odbioru mediów
+Critical thinking|krytyczne myślenie
+Consumer awareness|świadomość konsumencka
+Advertising ethics|etyka reklamy
+## 14. Adjectives for discussing advertising
+Intrusive|nachalny
+Ubiquitous|wszechobecny
+Pervasive|wszechobecny, przenikający
+Deceptive|zwodniczy
+Subtle|subtelny
+Overt|jawny
+Covert|ukryty
+Compelling|przekonujący
+Innovative|innowacyjny
+Innovative|nowatorski
+Exploitative|wyzyskujący
+Cost-effective|opłacalny
+Lucrative|dochodowy
+Persuasive|perswazyjny
+Disruptive|przełomowy
+Targeted|ukierunkowany
+Tailored|dostosowany
+Saturated|przesycony
+Misleading|mylący
+Far-reaching|dalekosiężny
+## 15. Nouns and concepts
+Consumer manipulation|manipulacja konsumentami
+Advertising expenditure|wydatki na reklamę
+Advertising revenue|przychody z reklamy
+Promotional incentive|zachęta promocyjna
+Marketability|atrakcyjność rynkowa
+Commercialisation|komercjalizacja
+Consumer scepticism|sceptycyzm konsumencki
+Advertising backlash|negatywna reakcja na reklamę
+Publicity stunt|chwyt reklamowy
+Brand endorsement|rekomendacja marki
+Consumer insight|wiedza o potrzebach konsumentów
+Advertising expenditure|nakłady reklamowe
+Market appeal|atrakcyjność rynkowa
+Brand differentiation|wyróżnianie marki
+Advertising landscape|krajobraz reklamowy
+Commercial persuasion|perswazja komercyjna
+Consumer vulnerability|podatność konsumentów
+Advertising credibility|wiarygodność reklamy
+Brand perception|postrzeganie marki
+Promotional strategy|strategia promocyjna`;
+
+const chapters=[],words=[];
+RAW.split('\n').forEach(l=>{
+  if(l.startsWith('## ')){chapters.push(l.slice(3));return;}
+  const i=l.indexOf('|');if(i<0)return;
+  words.push({id:words.length,en:l.slice(0,i),pl:l.slice(i+1),ch:chapters.length-1});
+});
+
+const $=id=>document.getElementById(id);
+const KEY='adverts_progress_v1';
+let P={known:[],unk:[]};
+try{P=JSON.parse(localStorage.getItem(KEY))||P}catch(e){}
+const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(P))}catch(e){}};
+const shuffle=a=>{a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.random()*(i+1)|0;[a[i],a[j]]=[a[j],a[i]]}return a};
+
+// theme
+const th=localStorage.getItem('adverts_theme')||(matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light');
+document.documentElement.dataset.theme=th;
+$('theme').onclick=()=>{const t=document.documentElement.dataset.theme==='dark'?'light':'dark';document.documentElement.dataset.theme=t;try{localStorage.setItem('adverts_theme',t)}catch(e){}};
+
+// home
+let mode='flash';
+const sc=$('scope');
+sc.innerHTML='<option value="all">Wszystkie słówka ('+words.length+')</option>'+chapters.map((c,i)=>`<option value="${i}">${c} (${words.filter(w=>w.ch===i).length})</option>`).join('');
+document.querySelectorAll('.modes button').forEach(b=>b.onclick=()=>{mode=b.dataset.m;document.querySelectorAll('.modes button').forEach(x=>x.classList.toggle('sel',x===b));updInfo()});
+function scopeWords(){return sc.value==='all'?words:words.filter(w=>w.ch==sc.value)}
+function stats(){
+  $('sAll').textContent=words.length;
+  $('sKnown').textContent=P.known.length;
+  $('sUnk').textContent=P.unk.length;
+}
+function updInfo(){
+  const sw=scopeWords();const k=sw.filter(w=>P.known.includes(w.id)).length;const u=sw.filter(w=>P.unk.includes(w.id)).length;
+  $('info').textContent=`W zakresie: ${sw.length} · opanowane: ${k} · do powtórki: ${u}`;
+}
+sc.onchange=updInfo;
+$('reset').onclick=()=>{if(confirm('Na pewno usunąć wszystkie zapisane postępy?')){P={known:[],unk:[]};save();stats();updInfo()}};
+stats();updInfo();
+
+// session
+let Q=[],total=0,sKnown=0,sUnk=new Set(),dir='en',cur=null,wrong=[],wTotal=0,wOk=0,checked=false;
+function show(v){['home','study'].forEach(x=>$(x).classList.toggle('hide',x!==v))}
+function startSession(ids,m,d){
+  mode=m;dir=d;Q=ids.slice();total=Q.length;sKnown=0;sUnk=new Set();wrong=[];wTotal=total;wOk=0;
+  if(!total){alert('Brak słówek do przerobienia w tym zakresie.');return}
+  show('study');$('endUI').classList.add('hide');
+  const w=m==='write';$('flashUI').classList.toggle('hide',w);$('writeUI').classList.toggle('hide',!w);
+  next();
+}
+$('start').onclick=()=>{
+  let sw=scopeWords();const d=$('dir').value;
+  if(mode==='review')sw=sw.filter(w=>P.unk.includes(w.id));
+  else if(mode==='flash'&&!$('t50').checked){
+    const rest=sw.filter(w=>!P.known.includes(w.id));
+    if(!rest.length){if(confirm('Wszystkie słówka w tym zakresie są już opanowane. Zacząć od nowa (zresetować je w tym zakresie)?')){P.known=P.known.filter(id=>!sw.some(w=>w.id===id));save();stats();updInfo()}else return}
+    else sw=rest;
+  }
+  if(mode==='review'&&!sw.length){alert('Brak słówek oznaczonych jako „Nie znam” w tym zakresie.');return}
+  let ids=sw.map(w=>w.id);
+  if($('t50').checked)ids=shuffle(ids).slice(0,50);
+  else if($('order').value==='rnd')ids=shuffle(ids);
+  startSession(ids,mode,d);
+};
+$('back').onclick=()=>{speechSynthesis&&speechSynthesis.cancel();show('home');stats();updInfo()};
+
+function progress(){
+  const rem=Q.length-sUnk.size;
+  $('cR').textContent=Math.max(rem,0);$('cU').textContent=sUnk.size;$('cK').textContent=sKnown;
+  $('bK').style.width=(total?sKnown/total*100:0)+'%';$('bU').style.width=(total?sUnk.size/total*100:0)+'%';
+}
+function next(){
+  progress();
+  if(!Q.length)return finish();
+  // prefer fresh cards before returning "unknown" ones, unless only those remain
+  cur=words[Q[0]];checked=false;
+  if(mode==='write'){
+    $('wc').textContent=`Słówko ${wTotal-Q.length+1} z ${wTotal}`;
+    $('wq').textContent=dir==='en'?cur.en:cur.pl;
+    const i=$('wi');i.value='';i.className='';i.disabled=false;i.placeholder=dir==='en'?'Wpisz tłumaczenie po polsku':'Wpisz tłumaczenie po angielsku';i.focus();
+    $('wf').className='fb';$('wf').textContent='';$('wn').textContent='Zatwierdź (Enter)';
+  }else{
+    const c=$('card');c.classList.remove('flip');
+    setTimeout(()=>{
+      $('ft').textContent=dir==='en'?cur.en:cur.pl;$('bt').textContent=dir==='en'?cur.pl:cur.en;
+      $('lf').textContent=dir==='en'?'English':'Polski';$('lb').textContent=dir==='en'?'Polski':'English';
+    },c.classList.contains('flip')?0:0);
+  }
+}
+function setFace(){}
+// flashcards
+$('card').onclick=()=>$('card').classList.toggle('flip');
+function speak(t,lang){if(!window.speechSynthesis)return;speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(t);u.lang=lang;u.rate=.9;speechSynthesis.speak(u)}
+$('spk1').onclick=e=>{e.stopPropagation();speak($('ft').textContent,dir==='en'?'en-GB':'pl-PL')};
+$('spk2').onclick=e=>{e.stopPropagation();speak($('bt').textContent,dir==='en'?'pl-PL':'en-GB')};
+function know(){
+  if(!cur||mode==='write')return;
+  Q.shift();sUnk.delete(cur.id);sKnown++;
+  if(!P.known.includes(cur.id))P.known.push(cur.id);
+  P.unk=P.unk.filter(x=>x!==cur.id);save();next();
+}
+function dontKnow(){
+  if(!cur||mode==='write')return;
+  Q.shift();Q.push(cur.id);sUnk.add(cur.id);
+  if(!P.unk.includes(cur.id))P.unk.push(cur.id);
+  P.known=P.known.filter(x=>x!==cur.id);save();next();
+}
+$('bKnow').onclick=know;$('bUnk').onclick=dontKnow;
+// swipe
+let sx=null;const scn=$('scene');
+scn.addEventListener('touchstart',e=>{sx=e.touches[0].clientX},{passive:true});
+scn.addEventListener('touchmove',e=>{if(sx==null)return;const dx=e.touches[0].clientX-sx;$('card').style.transition='none';$('card').style.marginLeft=dx*.5+'px'},{passive:true});
+scn.addEventListener('touchend',e=>{
+  const c=$('card');c.style.transition='';c.style.marginLeft='';
+  if(sx==null)return;const dx=e.changedTouches[0].clientX-sx;sx=null;
+  if(dx>80)know();else if(dx<-80)dontKnow();
+});
+// written test
+const norm=s=>s.trim().toLowerCase().replace(/\s+/g,' ');
+function accepted(w){
+  const key=dir==='en'?'en':'pl',ans=dir==='en'?'pl':'en';
+  const set=new Set();
+  words.filter(x=>x[key]===w[key]).forEach(x=>{set.add(norm(x[ans]));x[ans].split(' / ').forEach(p=>set.add(norm(p)))});
+  return set;
+}
+function submit(){
+  if(mode!=='write'||!cur)return;
+  if(checked){Q.shift();next();return}
+  const v=norm($('wi').value);if(!v){return}
+  const ok=accepted(cur).has(v);checked=true;
+  const i=$('wi');i.disabled=true;i.className=ok?'g':'r';
+  const f=$('wf');f.className='fb '+(ok?'g':'r');
+  const corr=dir==='en'?cur.pl:cur.en;
+  if(ok){wOk++;f.textContent='✓ Dobrze!'+(corr.toLowerCase()!==v?' (pełna odpowiedź: '+corr+')':'')}
+  else{wrong.push(cur.id);f.textContent='✗ Poprawna odpowiedź: '+corr}
+  $('wn').textContent='Dalej (Enter)';
+}
+$('wn').onclick=submit;
+// finish
+function finish(){
+  $('flashUI').classList.add('hide');$('writeUI').classList.add('hide');
+  const e=$('endUI');e.classList.remove('hide');
+  if(mode==='write'){
+    const pct=Math.round(wOk/wTotal*100);
+    e.innerHTML=`<div class="big">${pct}%</div><p style="text-align:center">Poprawnie: ${wOk} z ${wTotal}</p>`+
+    (wrong.length?`<b>Błędne słówka:</b><ul class="err">${wrong.map(id=>`<li><b>${words[id].en}</b> — ${words[id].pl}</li>`).join('')}</ul><button class="pri" id="rw" style="width:100%">Przećwicz błędne (${wrong.length})</button>`:'<p style="text-align:center">🎉 Bezbłędnie!</p>')+
+    `<button id="eb" style="width:100%;margin-top:10px">Wróć do menu</button>`;
+    if(wrong.length)$('rw').onclick=()=>startSession(shuffle(wrong),'write',dir);
+  }else{
+    e.innerHTML=`<div class="big">🎉</div><p style="text-align:center">Koniec talii! Opanowane w tej sesji: <b>${sKnown}</b> z ${total}.</p><button id="eb" class="pri" style="width:100%">Wróć do menu</button>`;
+  }
+  $('eb').onclick=$('back').onclick;
+}
+// keyboard
+document.addEventListener('keydown',e=>{
+  if($('study').classList.contains('hide'))return;
+  if(mode==='write'){if(e.key==='Enter'){e.preventDefault();submit()}return}
+  if(!Q.length)return;
+  if(e.code==='Space'){e.preventDefault();$('card').classList.toggle('flip')}
+  else if(e.key==='ArrowRight')know();
+  else if(e.key==='ArrowLeft')dontKnow();
+});
+</script>
+</body>
+</html>
